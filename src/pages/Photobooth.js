@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import Photostrip from "../pages/Photostrip"; // make sure this path is correct
 import html2canvas from "html2canvas";
@@ -7,7 +7,28 @@ import { Camera, RefreshCcw, Download } from "lucide-react";
 export default function Photobooth() {
   const webcamRef = useRef(null);
   const [photos, setPhotos] = useState([]);
-  const [facingMode, setFacingMode] = useState("user"); // 👈 track front/back camera
+  const [facingMode, setFacingMode] = useState("user");
+  const [orientation, setOrientation] = useState("portrait");
+
+  // 🔄 detect device orientation
+  useEffect(() => {
+    const updateOrientation = () => {
+      if (window.innerWidth > window.innerHeight) {
+        setOrientation("landscape");
+      } else {
+        setOrientation("portrait");
+      }
+    };
+
+    updateOrientation();
+    window.addEventListener("resize", updateOrientation);
+    window.addEventListener("orientationchange", updateOrientation);
+
+    return () => {
+      window.removeEventListener("resize", updateOrientation);
+      window.removeEventListener("orientationchange", updateOrientation);
+    };
+  }, []);
 
   const capturePhoto = () => {
     if (webcamRef.current) {
@@ -54,12 +75,21 @@ export default function Photobooth() {
                 audio={false}
                 screenshotFormat="image/png"
                 screenshotQuality={1}
-                className="w-full"
-                mirrored={false} // 👈 no mirror effect
+                className={`w-full ${
+                  orientation === "landscape" ? "rotate-0" : "rotate-0"
+                }`}
+                mirrored={false} // 🚫 disable browser mirror
                 videoConstraints={{
                   facingMode: facingMode,
                   width: 640,
                   height: 480,
+                }}
+                style={{
+                  transform:
+                    orientation === "landscape"
+                      ? "rotate(0deg) scaleX(1)" // ✅ keep upright in landscape
+                      : "rotate(0deg) scaleX(1)", // ✅ no mirror in portrait
+                  objectFit: "cover",
                 }}
               />
             </div>
