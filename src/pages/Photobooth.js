@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
-import Photostrip from "../pages/Photostrip"; // make sure this path is correct
+import Photostrip from "../pages/Photostrip"; // adjust path if needed
 import html2canvas from "html2canvas";
 import { Camera, RefreshCcw, Download } from "lucide-react";
 
@@ -9,21 +9,27 @@ export default function Photobooth() {
   const [photos, setPhotos] = useState([]);
   const [facingMode, setFacingMode] = useState("user");
   const [orientation, setOrientation] = useState("portrait");
+  const [filter, setFilter] = useState("none"); // selected filter
 
-  // 🔄 detect device orientation
+  const aspectRatio = 3 / 4;
+
+  const filterOptions = [
+    { name: "None", value: "none" },
+    { name: "Grayscale", value: "grayscale(100%)" },
+    { name: "Sepia", value: "sepia(100%)" },
+    { name: "Invert", value: "invert(100%)" },
+    { name: "Bright", value: "brightness(150%)" },
+    { name: "High Contrast", value: "contrast(150%)" },
+    { name: "Blur", value: "blur(3px)" },
+  ];
+
   useEffect(() => {
     const updateOrientation = () => {
-      if (window.innerWidth > window.innerHeight) {
-        setOrientation("landscape");
-      } else {
-        setOrientation("portrait");
-      }
+      setOrientation(window.innerWidth > window.innerHeight ? "landscape" : "portrait");
     };
-
     updateOrientation();
     window.addEventListener("resize", updateOrientation);
     window.addEventListener("orientationchange", updateOrientation);
-
     return () => {
       window.removeEventListener("resize", updateOrientation);
       window.removeEventListener("orientationchange", updateOrientation);
@@ -32,27 +38,32 @@ export default function Photobooth() {
 
   const capturePhoto = () => {
     if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) {
+      const video = webcamRef.current.video;
+      if (!video) return;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+
+      if (ctx) {
+        ctx.filter = filter;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageSrc = canvas.toDataURL("image/png");
         setPhotos((prev) => [...prev, imageSrc]);
-      } else {
-        alert("Camera not ready, try again.");
       }
     }
   };
 
-  const resetStrip = () => {
-    setPhotos([]);
-  };
-
+  const resetStrip = () => setPhotos([]);
   const downloadStrip = () => {
     const strip = document.getElementById("photostrip");
     if (!strip) return;
 
-    html2canvas(strip, { useCORS: true }).then((canvas) => {
+    html2canvas(strip, { useCORS: true, scale: 2 }).then((canvas) => {
       const link = document.createElement("a");
       link.download = "photostrip.png";
-      link.href = canvas.toDataURL("image/png");
+      link.href = canvas.toDataURL("image/png", 1.0);
       link.click();
     });
   };
@@ -69,32 +80,45 @@ export default function Photobooth() {
         {/* Left: Camera */}
         <div className="flex flex-col items-center">
           {photos.length < 4 && (
-            <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-lg bg-black">
+            <div className="w-[280px] h-[160px] rounded-2xl overflow-hidden shadow-lg bg-black">
               <Webcam
                 ref={webcamRef}
                 audio={false}
                 screenshotFormat="image/png"
                 screenshotQuality={1}
-                className={`w-full ${
-                  orientation === "landscape" ? "rotate-0" : "rotate-0"
-                }`}
-                mirrored={false} // 🚫 disable browser mirror
+                mirrored={false}
                 videoConstraints={{
                   facingMode: facingMode,
-                  width: 640,
-                  height: 480,
+                  aspectRatio: 7 / 4,
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
                 }}
+                className="w-full h-full object-cover"
                 style={{
-                  transform:
-                    orientation === "landscape"
-                      ? "rotate(0deg) scaleX(1)" // ✅ keep upright in landscape
-                      : "rotate(0deg) scaleX(1)", // ✅ no mirror in portrait
-                  objectFit: "cover",
+                  transform: "rotate(0deg) scaleX(1)",
+                  filter: filter,
                 }}
               />
             </div>
           )}
 
+          {/* Filter buttons below camera */}
+          <div className="flex gap-2 mt-4 flex-wrap justify-center">
+            {filterOptions.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={`w-14 h-14 rounded-xl border-2 ${
+                  filter === f.value ? "border-blue-500" : "border-gray-400"
+                } overflow-hidden shadow-md flex items-center justify-center flex-col cursor-pointer`}
+                style={{ filter: f.value }}
+              >
+                <div className="text-xs font-bold text-white">{f.name}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Capture / Flip / Download / Retake buttons */}
           <div className="flex gap-4 mt-6 flex-wrap justify-center">
             {photos.length < 4 ? (
               <>
