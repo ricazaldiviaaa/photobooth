@@ -7,6 +7,7 @@ import { Camera, RefreshCcw, Download } from "lucide-react";
 export default function Photobooth() {
   const webcamRef = useRef(null);
   const [photos, setPhotos] = useState([]);
+  const [facingMode, setFacingMode] = useState("user"); // 👈 track front/back camera
 
   const capturePhoto = () => {
     if (webcamRef.current) {
@@ -35,6 +36,10 @@ export default function Photobooth() {
     });
   };
 
+  const flipCamera = () => {
+    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-6">
       <h1 className="text-4xl font-extrabold mb-8">Photobooth</h1>
@@ -50,19 +55,32 @@ export default function Photobooth() {
                 screenshotFormat="image/png"
                 screenshotQuality={1}
                 className="w-full"
-                videoConstraints={{ facingMode: "user", width: 640, height: 480 }}
+                mirrored={false} // 👈 no mirror effect
+                videoConstraints={{
+                  facingMode: facingMode,
+                  width: 640,
+                  height: 480,
+                }}
               />
             </div>
           )}
 
-          <div className="flex gap-4 mt-6">
+          <div className="flex gap-4 mt-6 flex-wrap justify-center">
             {photos.length < 4 ? (
-              <button
-                onClick={capturePhoto}
-                className="flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold shadow-lg transition"
-              >
-                <Camera size={20} /> Capture
-              </button>
+              <>
+                <button
+                  onClick={capturePhoto}
+                  className="flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold shadow-lg transition"
+                >
+                  <Camera size={20} /> Capture
+                </button>
+                <button
+                  onClick={flipCamera}
+                  className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 rounded-xl font-semibold shadow-lg transition"
+                >
+                  Flip
+                </button>
+              </>
             ) : (
               <>
                 <button
