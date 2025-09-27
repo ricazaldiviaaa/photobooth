@@ -1,17 +1,16 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Webcam from "react-webcam";
 import Photostrip from "../pages/Photostrip"; // adjust path if needed
 import html2canvas from "html2canvas";
-import { Camera, RefreshCcw, Download } from "lucide-react";
+import { Camera, RefreshCcw, Download, RotateCcw, ArrowLeft } from "lucide-react";
 
 export default function Photobooth() {
   const webcamRef = useRef(null);
+  const navigate = useNavigate(); // for navigation
   const [photos, setPhotos] = useState([]);
   const [facingMode, setFacingMode] = useState("user");
-  const [orientation, setOrientation] = useState("portrait");
-  const [filter, setFilter] = useState("none"); // selected filter
-
-  const aspectRatio = 3 / 4;
+  const [filter, setFilter] = useState("none");
 
   const filterOptions = [
     { name: "None", value: "none" },
@@ -19,22 +18,9 @@ export default function Photobooth() {
     { name: "Sepia", value: "sepia(100%)" },
     { name: "Invert", value: "invert(100%)" },
     { name: "Bright", value: "brightness(150%)" },
-    { name: "High Contrast", value: "contrast(150%)" },
+    { name: "Contrast", value: "contrast(150%)" },
     { name: "Blur", value: "blur(3px)" },
   ];
-
-  useEffect(() => {
-    const updateOrientation = () => {
-      setOrientation(window.innerWidth > window.innerHeight ? "landscape" : "portrait");
-    };
-    updateOrientation();
-    window.addEventListener("resize", updateOrientation);
-    window.addEventListener("orientationchange", updateOrientation);
-    return () => {
-      window.removeEventListener("resize", updateOrientation);
-      window.removeEventListener("orientationchange", updateOrientation);
-    };
-  }, []);
 
   const capturePhoto = () => {
     if (webcamRef.current) {
@@ -67,64 +53,70 @@ export default function Photobooth() {
       link.click();
     });
   };
-
   const flipCamera = () => {
     setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-6">
-      <h1 className="text-4xl font-extrabold mb-8">Photobooth</h1>
+    <div className="min-h-screen bg-gradient-to-b from-gray-800 via-gray-900 to-black flex flex-col items-center p-6 text-white">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/")}
+        className="self-start mb-4 flex items-center gap-2 text-white hover:text-gray-300 font-semibold"
+      >
+        <ArrowLeft size={18} /> Back
+      </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-6xl">
-        {/* Left: Camera */}
-        <div className="flex flex-col items-center">
+      <h1 className="text-4xl font-extrabold mb-8 text-center tracking-wide">
+        Photobooth
+      </h1>
+
+      <div className="flex flex-col lg:flex-row gap-10 w-full max-w-7xl justify-center items-start">
+        {/* Camera & Controls */}
+        <div className="flex flex-col items-center w-full lg:w-2/3 bg-gray-900/70 backdrop-blur-md rounded-3xl p-6 shadow-2xl">
           {photos.length < 4 && (
-            <div className="w-[280px] h-[160px] rounded-2xl overflow-hidden shadow-lg bg-black">
+            <div className="w-full max-w-xl aspect-video rounded-2xl overflow-hidden shadow-lg bg-black">
               <Webcam
                 ref={webcamRef}
                 audio={false}
-                screenshotFormat="image/png"
-                screenshotQuality={1}
                 mirrored={false}
+                screenshotFormat="image/png"
                 videoConstraints={{
-                  facingMode: facingMode,
-                  aspectRatio: 7 / 4,
-                  width: { ideal: 1920 },
-                  height: { ideal: 1080 },
+                  facingMode,
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
                 }}
                 className="w-full h-full object-cover"
-                style={{
-                  transform: "rotate(0deg) scaleX(1)",
-                  filter: filter,
-                }}
+                style={{ filter }}
               />
             </div>
           )}
 
-          {/* Filter buttons below camera */}
-          <div className="flex gap-2 mt-4 flex-wrap justify-center">
+          {/* Filters */}
+          <div className="flex gap-3 mt-6 overflow-x-auto w-full justify-center pb-2">
             {filterOptions.map((f) => (
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value)}
-                className={`w-14 h-14 rounded-xl border-2 ${
-                  filter === f.value ? "border-blue-500" : "border-gray-400"
-                } overflow-hidden shadow-md flex items-center justify-center flex-col cursor-pointer`}
+                className={`min-w-[90px] px-3 py-2 rounded-lg border-2 text-sm font-medium transition ${
+                  filter === f.value
+                    ? "bg-indigo-600 border-indigo-400 text-white"
+                    : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
+                }`}
                 style={{ filter: f.value }}
               >
-                <div className="text-xs font-bold text-white">{f.name}</div>
+                {f.name}
               </button>
             ))}
           </div>
 
-          {/* Capture / Flip / Download / Retake buttons */}
-          <div className="flex gap-4 mt-6 flex-wrap justify-center">
+          {/* Action Buttons */}
+          <div className="flex gap-4 mt-6 flex-wrap justify-center w-full">
             {photos.length < 4 ? (
               <>
                 <button
                   onClick={capturePhoto}
-                  className="flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold shadow-lg transition"
+                  className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-semibold shadow-lg transition"
                 >
                   <Camera size={20} /> Capture
                 </button>
@@ -132,7 +124,7 @@ export default function Photobooth() {
                   onClick={flipCamera}
                   className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 rounded-xl font-semibold shadow-lg transition"
                 >
-                  Flip
+                  <RotateCcw size={20} /> Flip
                 </button>
               </>
             ) : (
@@ -154,8 +146,10 @@ export default function Photobooth() {
           </div>
         </div>
 
-        {/* Right: Photostrip */}
-        <Photostrip photos={photos} />
+        {/* Photostrip Panel */}
+        <div className="flex justify-center lg:justify-start w-full lg:w-1/3">
+          <Photostrip photos={photos} />
+        </div>
       </div>
     </div>
   );
